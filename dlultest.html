@@ -78,12 +78,12 @@ function httpReq(type, id) {
         set_id("Note", "Internal error. Fix the code.");
         return;
     }
-    var theUrl = theFile + "?junk=" + junk.getTime(); // Having this junk postfixed causes the browser not to find the target in its cache
+    var theUrl = theFile + "?junk=" + junk.getTime(); // Having this junk postfixed may cause the browser not to find the target in its cache
     if (state_save == -1) {
         tx = new XMLHttpRequest(); 
         tx.onreadystatechange = httpResp; 
         tx.open(type, theUrl, true); 
-        tx.setRequestHeader("Cache-Control", "no-cache");
+        tx.setRequestHeader("Cache-Control", "no-cache, no-store");
         tx.send(); 
         set_id("Status", "Request sent.");
         set_id("Note", "Requested " + theFile);
