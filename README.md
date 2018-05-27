@@ -7,4 +7,4 @@
   <li>Creating XMLHttpRequest and binding its onreadystatechange</li>
 </ul>
 <h2>Installation</h2>
-<p>Add all files to your web server and request the dltest.html with your browser.</p>
+<p>Add all files to your web server and request the dlultest.html with your browser.</p>
