@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- 
+    This is a Javascript-only page to test content download speed.
+
+    Purposed merits:
+       - does not require any server side computation
+       - does not require a multi-GHz CPU in the client
+
+    I plan to add an upload part later on.
+
+    Deployment:
+       - update code in function set_targets to reflect your set of test files
+       - upload this file to your web server
+       - upload your test files to the same directory in your web server
+-->
+<HTML>
+<HEAD>
+<TITLE>Download-upload test</TITLE>
+<SCRIPT>
+var state_save = -1;
+var started = null;
+var finished = null;
+var tx = null; 
+function set_id(id, html) {
+    document.getElementById(id).innerHTML = html;
+}
+//
+// Creating the buttons
+function target(id, type, label, file) {
+    this.id = "B" + id;
+    this.type = type;
+    this.label = label;
+    this.file = file;
+    this.html = "<BUTTON id='" + this.id + "' type='button' onclick='httpReq(\"" + type + "\", this.id)'>" + this.label + "</BUTTON>";
+}
+var targets = null;
+function set_targets() {
+    var i = 0;
+    var html = "";
+    targets = new Array();
+    // Edit this targets list to suite yourself:
+    targets[i++] = new target(i, "GET", "Get 20KB", "test20KB.txt");
+    targets[i++] = new target(i, "GET", "Get 200KB", "test200KB.txt");
+    targets[i++] = new target(i, "GET", "Get 2000KB", "test2000KB.txt");
+    targets[i++] = new target(i, "POST", "POST", "post_test.txt");
+    for (var i in targets) {
+	html += targets[i].html;
+    }
+    set_id("Buttons", html);
+}
+function get_target_file(id) {
+    for (var i in targets) {
+        if (targets[i].id == id) {
+            return targets[i].file;
+        }
+    }
+    return "";
+}
+//
+// Transaction handling
+function reset_tx(status_also) {
+    if (tx) {
+        tx.onreadystatechange = null; // Hope this disables the callback
+        tx = null;
+        if (state_save != -1) {
+            state_save = -1;
+            set_id("Note", "Download interrupted.");
+            if (status_also) {
+                set_id("Status", "");
+            }
+        }
+    }
+}
+function httpReq(type, id) { 
+    var junk = new Date();
+    var theFile = get_target_file(id);
+    if (theFile == "") {
+        set_id("Note", "Internal error. Fix the code.");
+        return;
+    }
+    var theUrl = theFile + "?junk=" + junk.getTime(); // Having this junk postfixed causes the browser not to find the target in its cache
+    if (state_save == -1) {
+        tx = new XMLHttpRequest(); 
+        tx.onreadystatechange = httpResp; 
+        tx.open(type, theUrl, true); 
+        tx.setRequestHeader("Cache-Control", "no-cache");
+        tx.send(); 
+        set_id("Status", "Request sent.");
+        set_id("Note", "Requested " + theFile);
+        started = new Date();
+    } else {
+        set_id("Note", "Already downloading.");
+    }
+} 
+function httpResp() { 
+    if (!tx) {
+        return;
+    }
+    var state = tx.readyState;
+    if (state_save != state) {
+        state_save = state;
+        if (state == 1) { 
+            set_id("Status", "Connected.");
+        } else if (state == 2) { 
+            set_id("Status", "Started Receiving.");
+        } else if (state == 3) { 
+            set_id("Status", "Receiving...");
+        } else if (state == 4) { 
+            if (tx.status != 200) {
+                set_id("Status", "Error status " + tx.status + " received");
+                reset_tx(false);
+                return;
+            }
+            var finished = new Date();
+            var interval = (finished.getTime()-started.getTime())/1000;
+            var len = tx.responseText.length;
+            var speed = Math.floor(1000*(8*len/1024/1024)/interval)/1000;
+            set_id("Status", "Download speed was " + speed + "Mbps (got " + len + " bytes in " + interval + " seconds).");
+            set_id("Note", "Every download is cached into a separate file by your browser.");
+            state_save = -1;
+        }                     
+    } 
+} 
+</SCRIPT>
+</HEAD>
+<BODY onload="return set_targets();">
+<SPAN id="Buttons">&nbsp;</SPAN>
+<BUTTON type="button" onclick="reset_tx(true)">Interrupt</BUTTON>
+<TABLE>
+<TR><TD><B>Status:</B></TD><TD id="Status">&nbsp;</TD></TR>
+<TR><TD><B>Note:</B></TD><TD id="Note">Please select download target to start.</TD></TR>
+</TABLE>
+</BODY>
+</HTML>
